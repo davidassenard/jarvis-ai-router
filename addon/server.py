@@ -1,0 +1,31 @@
+import json, os
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from router import Router
+
+opts = {}
+try:
+    with open('/data/options.json', encoding='utf-8') as f: opts = json.load(f)
+except OSError: pass
+for key in ('groq_api_key','groq_model','gemini_api_key','gemini_model','local_llm_url','local_llm_key','local_llm_model'):
+    env = key.upper()
+    if opts.get(key): os.environ[env] = str(opts[key])
+if opts.get('order'): os.environ['JARVIS_ROUTER_ORDER'] = opts['order']
+router = Router()
+
+class Handler(BaseHTTPRequestHandler):
+    def log_message(self, *_): return
+    def do_GET(self):
+        if self.path == '/health': self._send(200, {'ok': True, 'providers': list(router.providers)})
+        else: self._send(404, {'error': 'not found'})
+    def do_POST(self):
+        if self.path != '/v1/chat/completions': return self._send(404, {'error':'not found'})
+        try:
+            body = json.loads(self.rfile.read(int(self.headers.get('content-length','0'))))
+            result = router.complete(body.get('messages', []))
+            self._send(200, {'choices':[{'message':{'role':'assistant','content':result.text}}], 'jarvis_provider':result.provider, 'jarvis_attempts':result.attempts})
+        except Exception as exc:
+            self._send(502, {'error': 'all providers unavailable'})
+    def _send(self, code, obj):
+        data = json.dumps(obj).encode(); self.send_response(code); self.send_header('Content-Type','application/json'); self.send_header('Content-Length',str(len(data))); self.end_headers(); self.wfile.write(data)
+
+ThreadingHTTPServer(('0.0.0.0', 8787), Handler).serve_forever()
