@@ -20,11 +20,22 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, {'object': 'list', 'data': [{'id': os.getenv('LOCAL_LLM_MODEL', 'jarvis'), 'object': 'model', 'owned_by': 'jarvis'}]})
         else: self._send(404, {'error': 'not found'})
     def do_POST(self):
-        if self.path != '/v1/chat/completions': return self._send(404, {'error':'not found'})
+        if self.path not in ('/v1/chat/completions', '/v1/responses'):
+            return self._send(404, {'error':'not found'})
         try:
             body = json.loads(self.rfile.read(int(self.headers.get('content-length','0'))))
-            result = router.complete(body.get('messages', []))
-            self._send(200, {'choices':[{'message':{'role':'assistant','content':result.text}}], 'jarvis_provider':result.provider, 'jarvis_attempts':result.attempts})
+            messages = body.get('messages', [])
+            if self.path == '/v1/responses':
+                inp = body.get('input', '')
+                if isinstance(inp, str):
+                    messages = [{'role': 'user', 'content': inp}]
+                elif isinstance(inp, list):
+                    messages = inp
+                result = router.complete(messages)
+                self._send(200, {'id':'jarvis-response','object':'response','model':body.get('model','local'), 'output':[{'type':'message','role':'assistant','content':[{'type':'output_text','text':result.text}]}], 'output_text':result.text, 'jarvis_provider':result.provider, 'jarvis_attempts':result.attempts})
+            else:
+                result = router.complete(messages)
+                self._send(200, {'choices':[{'message':{'role':'assistant','content':result.text}}], 'jarvis_provider':result.provider, 'jarvis_attempts':result.attempts})
         except Exception as exc:
             self._send(502, {'error': 'all providers unavailable'})
     def _send(self, code, obj):
