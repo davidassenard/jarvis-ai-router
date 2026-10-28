@@ -18,6 +18,16 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == '/health': self._send(200, {'ok': True, 'providers': list(router.providers)})
         elif self.path == '/v1/models':
             self._send(200, {'object': 'list', 'data': [{'id': os.getenv('LOCAL_LLM_MODEL', 'jarvis'), 'object': 'model', 'owned_by': 'jarvis'}]})
+        elif self.path == '/diagnostics':
+            result = {}
+            for name, fn in router.providers.items():
+                try:
+                    text = fn([{'role': 'user', 'content': 'Réponds uniquement OK.'}])
+                    result[name] = {'ok': bool(text)}
+                except Exception as exc:
+                    status = getattr(exc, 'status', None)
+                    result[name] = {'ok': False, 'status': status, 'error': type(exc).__name__}
+            self._send(200, {'providers': result})
         else: self._send(404, {'error': 'not found'})
     def do_POST(self):
         if self.path not in ('/v1/chat/completions', '/v1/responses'):
