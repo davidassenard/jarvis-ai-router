@@ -27,7 +27,10 @@ def _post(url: str, payload: dict, headers: dict[str, str], timeout: float) -> d
         with urllib.request.urlopen(req, timeout=timeout) as response:
             return json.loads(response.read())
     except urllib.error.HTTPError as exc:
-        raise ProviderError("provider", exc.code in (408, 409, 429) or exc.code >= 500, exc.code) from None
+        # Authentication/model/endpoint errors are also retryable here: the
+        # next configured provider must remain available when one provider's
+        # key or model is restricted.
+        raise ProviderError("provider", exc.code in (400, 401, 403, 404, 408, 409, 429) or exc.code >= 500, exc.code) from None
     except (urllib.error.URLError, TimeoutError, OSError):
         raise ProviderError("provider", True) from None
 
