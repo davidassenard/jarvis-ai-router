@@ -16,6 +16,8 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, *_): return
     def do_GET(self):
         if self.path == '/health': self._send(200, {'ok': True, 'providers': list(router.providers)})
+        elif self.path == '/v1/models':
+            self._send(200, {'object': 'list', 'data': [{'id': os.getenv('LOCAL_LLM_MODEL', 'jarvis'), 'object': 'model', 'owned_by': 'jarvis'}]})
         else: self._send(404, {'error': 'not found'})
     def do_POST(self):
         if self.path != '/v1/chat/completions': return self._send(404, {'error':'not found'})
