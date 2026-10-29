@@ -45,7 +45,7 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(200, {'id':'jarvis-response','object':'response','model':body.get('model','local'), 'output':[{'type':'message','role':'assistant','content':[{'type':'output_text','text':result.text}]}], 'output_text':result.text, 'jarvis_provider':result.provider, 'jarvis_attempts':result.attempts})
             else:
                 result = router.complete(messages)
-                self._send(200, {'choices':[{'message':{'role':'assistant','content':result.text}}], 'jarvis_provider':result.provider, 'jarvis_attempts':result.attempts})
+                self._send(200, {'id':'jarvis-chat','object':'chat.completion','model':body.get('model','jarvis'), 'choices':[{'index':0,'message':{'role':'assistant','content':result.text},'finish_reason':'stop'}], 'jarvis_provider':result.provider, 'jarvis_attempts':result.attempts})
         except Exception as exc:
             self._send(502, {'error': 'all providers unavailable'})
     def _send(self, code, obj):
