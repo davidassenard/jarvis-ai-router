@@ -103,7 +103,7 @@ class Router:
                     out.append({"title": "Open-Meteo", "url": "https://open-meteo.com/", "content": json.dumps({"current": data.get("current"), "daily": data.get("daily")}, ensure_ascii=False)})
                 except (urllib.error.URLError, TimeoutError, OSError, ValueError): pass
         if any(x in q for x in ("actualité", "actualite", "news", "nouvelles", "informations récentes", "informations recentes")):
-            for feed in ("https://www.franceinfo.fr/france.rss", "https://www.lemonde.fr/rss/une.xml"):
+            for feed in ("https://news.google.com/rss?hl=fr&gl=FR&ceid=FR:fr", "https://www.franceinfo.fr/france.rss", "https://www.lemonde.fr/rss/une.xml"):
                 try:
                     req = urllib.request.Request(feed, headers={"User-Agent": "Jarvis-local/1.0", "Accept": "application/rss+xml, application/xml"})
                     with urllib.request.urlopen(req, timeout=4) as r: root = ET.fromstring(r.read())

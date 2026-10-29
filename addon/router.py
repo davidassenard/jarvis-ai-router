@@ -88,9 +88,14 @@ class Router:
                     lat, lon = str(cfg.get("latitude", "")), str(cfg.get("longitude", ""))
                 except (OSError, ValueError, TypeError): pass
             # The add-on container cannot always see Home Assistant's internal
-            # storage. Keep the configured Maison zone as a local fallback.
+            # storage. Resolve an approximate local position without secrets.
             if not (lat and lon):
-                lat, lon = "49.085365", "-0.395308"
+                try:
+                    req = urllib.request.Request("https://ipapi.co/json/", headers={"User-Agent": "Jarvis-local/1.0"})
+                    with urllib.request.urlopen(req, timeout=3) as r: geo = json.loads(r.read())
+                    lat, lon = str(geo.get("latitude", "")), str(geo.get("longitude", ""))
+                except (urllib.error.URLError, TimeoutError, OSError, ValueError):
+                    pass
             if lat and lon:
                 try:
                     url = "https://api.open-meteo.com/v1/forecast?" + urllib.parse.urlencode({"latitude": lat, "longitude": lon, "current": "temperature_2m,weather_code,wind_speed_10m", "daily": "temperature_2m_max,temperature_2m_min,weather_code", "forecast_days": 2, "timezone": "auto"})
@@ -98,7 +103,7 @@ class Router:
                     out.append({"title": "Open-Meteo", "url": "https://open-meteo.com/", "content": json.dumps({"current": data.get("current"), "daily": data.get("daily")}, ensure_ascii=False)})
                 except (urllib.error.URLError, TimeoutError, OSError, ValueError): pass
         if any(x in q for x in ("actualité", "actualite", "news", "nouvelles", "informations récentes", "informations recentes")):
-            for feed in ("https://www.franceinfo.fr/france.rss", "https://www.lemonde.fr/rss/une.xml"):
+            for feed in ("https://news.google.com/rss?hl=fr&gl=FR&ceid=FR:fr", "https://www.franceinfo.fr/france.rss", "https://www.lemonde.fr/rss/une.xml"):
                 try:
                     req = urllib.request.Request(feed, headers={"User-Agent": "Jarvis-local/1.0", "Accept": "application/rss+xml, application/xml"})
                     with urllib.request.urlopen(req, timeout=4) as r: root = ET.fromstring(r.read())
