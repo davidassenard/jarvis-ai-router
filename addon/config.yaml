@@ -22,6 +22,7 @@ options:
   local_llm_key: ""
   local_llm_model: "local"
   order: "groq,gemini,local"
+  search_url: ""
 schema:
   groq_api_key: password
   groq_model: str
@@ -31,3 +32,4 @@ schema:
   local_llm_key: password
   local_llm_model: str
   order: str
+  search_url: str

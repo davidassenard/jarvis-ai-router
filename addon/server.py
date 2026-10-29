@@ -6,7 +6,7 @@ opts = {}
 try:
     with open('/data/options.json', encoding='utf-8') as f: opts = json.load(f)
 except OSError: pass
-for key in ('groq_api_key','groq_model','gemini_api_key','gemini_model','local_llm_url','local_llm_key','local_llm_model'):
+for key in ('groq_api_key','groq_model','gemini_api_key','gemini_model','local_llm_url','local_llm_key','local_llm_model','search_url'):
     env = key.upper()
     if opts.get(key): os.environ[env] = str(opts[key])
 if opts.get('order'): os.environ['JARVIS_ROUTER_ORDER'] = opts['order']
