@@ -42,6 +42,9 @@ class Handler(BaseHTTPRequestHandler):
                 elif isinstance(inp, list):
                     messages = inp
                 result = router.complete(messages)
+                if body.get('stream'):
+                    self._send_sse(result.text, body.get('model','local'))
+                    return
                 now = int(time.time())
                 self._send(200, {'id':'jarvis-response','object':'response','created_at':now,'status':'completed','model':body.get('model','local'), 'output':[{'id':'msg_jarvis','type':'message','status':'completed','role':'assistant','content':[{'type':'output_text','text':result.text,'annotations':[]}]}], 'output_text':result.text, 'parallel_tool_calls':False,'tool_choice':'auto','tools':[],'usage':{'input_tokens':0,'output_tokens':len(result.text.split()),'total_tokens':len(result.text.split())}, 'jarvis_provider':result.provider, 'jarvis_attempts':result.attempts})
             else:
@@ -51,5 +54,15 @@ class Handler(BaseHTTPRequestHandler):
             self._send(502, {'error': 'all providers unavailable'})
     def _send(self, code, obj):
         data = json.dumps(obj).encode(); self.send_response(code); self.send_header('Content-Type','application/json'); self.send_header('Content-Length',str(len(data))); self.end_headers(); self.wfile.write(data)
+    def _send_sse(self, text, model):
+        events = [
+            ('response.created', {'type':'response.created','response':{'id':'jarvis-response','object':'response','status':'in_progress','model':model}}),
+            ('response.output_text.delta', {'type':'response.output_text.delta','item_id':'msg_jarvis','output_index':0,'content_index':0,'delta':text}),
+            ('response.output_text.done', {'type':'response.output_text.done','item_id':'msg_jarvis','output_index':0,'content_index':0,'text':text}),
+            ('response.completed', {'type':'response.completed','response':{'id':'jarvis-response','object':'response','status':'completed','model':model,'output_text':text}}),
+        ]
+        self.send_response(200); self.send_header('Content-Type','text/event-stream'); self.send_header('Cache-Control','no-cache'); self.end_headers()
+        for name, payload in events:
+            self.wfile.write((f'event: {name}\\ndata: {json.dumps(payload, ensure_ascii=False)}\\n\\n').encode()); self.wfile.flush()
 
 ThreadingHTTPServer(('0.0.0.0', 8787), Handler).serve_forever()
