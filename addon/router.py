@@ -136,6 +136,22 @@ class Router:
         return [system, *messages]
 
     def complete(self, messages) -> Result:
+        # Weather is deterministic and should not wait for an LLM. Returning a
+        # short answer here avoids provider timeouts on the Assist path.
+        query = next((str(m.get("content", "")) for m in reversed(messages) if m.get("role") == "user"), "")
+        if self._needs_web(messages) and re.search(r"\b(météo|meteo|temps|prévision|prevision)\b", query.lower()):
+            weather = self._builtin_web(query)
+            if weather:
+                try:
+                    payload = json.loads(weather[0]["content"])
+                    cur = payload.get("current", {})
+                    temp = cur.get("temperature_2m")
+                    wind = cur.get("wind_speed_10m")
+                    text = f"Il fait actuellement {temp} degrés chez vous"
+                    if wind is not None: text += f", avec un vent de {wind} kilomètres par heure"
+                    return Result(text + ". Source : Open-Meteo.", "open-meteo", ("open-meteo",))
+                except (KeyError, TypeError, ValueError):
+                    pass
         messages = self._with_web_context(messages)
         attempts = []
         for name in self.order:
