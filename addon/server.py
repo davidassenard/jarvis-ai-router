@@ -1,4 +1,4 @@
-import json, os
+import json, os, time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from router import Router
 
@@ -45,7 +45,7 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(200, {'id':'jarvis-response','object':'response','model':body.get('model','local'), 'output':[{'type':'message','role':'assistant','content':[{'type':'output_text','text':result.text}]}], 'output_text':result.text, 'jarvis_provider':result.provider, 'jarvis_attempts':result.attempts})
             else:
                 result = router.complete(messages)
-                self._send(200, {'id':'jarvis-chat','object':'chat.completion','model':body.get('model','jarvis'), 'choices':[{'index':0,'message':{'role':'assistant','content':result.text},'finish_reason':'stop'}], 'jarvis_provider':result.provider, 'jarvis_attempts':result.attempts})
+                self._send(200, {'id':'jarvis-chat','object':'chat.completion','created':int(time.time()),'model':body.get('model','jarvis'), 'choices':[{'index':0,'message':{'role':'assistant','content':result.text},'finish_reason':'stop'}], 'usage':{'prompt_tokens':0,'completion_tokens':len(result.text.split()),'total_tokens':len(result.text.split())}, 'jarvis_provider':result.provider, 'jarvis_attempts':result.attempts})
         except Exception as exc:
             self._send(502, {'error': 'all providers unavailable'})
     def _send(self, code, obj):
