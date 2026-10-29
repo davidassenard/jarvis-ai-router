@@ -42,7 +42,8 @@ class Handler(BaseHTTPRequestHandler):
                 elif isinstance(inp, list):
                     messages = inp
                 result = router.complete(messages)
-                self._send(200, {'id':'jarvis-response','object':'response','model':body.get('model','local'), 'output':[{'type':'message','role':'assistant','content':[{'type':'output_text','text':result.text}]}], 'output_text':result.text, 'jarvis_provider':result.provider, 'jarvis_attempts':result.attempts})
+                now = int(time.time())
+                self._send(200, {'id':'jarvis-response','object':'response','created_at':now,'status':'completed','model':body.get('model','local'), 'output':[{'id':'msg_jarvis','type':'message','status':'completed','role':'assistant','content':[{'type':'output_text','text':result.text,'annotations':[]}]}], 'output_text':result.text, 'parallel_tool_calls':False,'tool_choice':'auto','tools':[],'usage':{'input_tokens':0,'output_tokens':len(result.text.split()),'total_tokens':len(result.text.split())}, 'jarvis_provider':result.provider, 'jarvis_attempts':result.attempts})
             else:
                 result = router.complete(messages)
                 self._send(200, {'id':'jarvis-chat','object':'chat.completion','created':int(time.time()),'model':body.get('model','jarvis'), 'choices':[{'index':0,'message':{'role':'assistant','content':result.text},'finish_reason':'stop'}], 'usage':{'prompt_tokens':0,'completion_tokens':len(result.text.split()),'total_tokens':len(result.text.split())}, 'jarvis_provider':result.provider, 'jarvis_attempts':result.attempts})
